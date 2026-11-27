@@ -1,0 +1,27 @@
+# Rebuilds pool.json (player pool: Sleeper ADP + FantasyPros ranks) once a day and commits it when the data changed.
+# The bot commit triggers the GitHub Pages deploy, so the live site picks it up with no manual step.
+name: Update player pool
+
+on:
+  schedule:
+    - cron: '0 13 * * *'   # daily; DynastyProcess refreshes FantasyPros ranks weekly, Sleeper ADP moves daily in draft season
+  workflow_dispatch:        # "Run workflow" button for a manual refresh
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+      - run: python build_pool.py
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git add pool.json
+          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Update player pool" && git push; fi
